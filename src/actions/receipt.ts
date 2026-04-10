@@ -27,7 +27,8 @@ export interface SaleRecord {
   status: string
   note: string | null
   branch_id: number
-  branches?: { branch_name: string } 
+  cashier_name?: string | null
+  branches?: { branch_name: string }
   sale_items?: SaleItem[]
 }
 

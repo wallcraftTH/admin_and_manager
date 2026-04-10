@@ -1,3 +1,5 @@
+
+//src/app/(admin)/inventory/[id]/page.tsx
 import WoodSlabForm from "../../../../components/WoodSlabForm" 
 import { getProductById } from "../../../../actions/woodslab"
 import { notFound } from "next/navigation"

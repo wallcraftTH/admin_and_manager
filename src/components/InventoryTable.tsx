@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Edit, Package, Layers, Hammer, AlertCircle } from "lucide-react"
+import { Edit, Package, AlertCircle } from "lucide-react"
 import RoughWoodForm from "./RoughWoodForm"
+import CategoryBadge from "./CategoryBadge"
 
 interface InventoryTableProps {
   products: any[]
@@ -80,11 +81,7 @@ export default function InventoryTable({ products, activeTab }: InventoryTablePr
                       </div>
                     </td>
                     <td className="p-4 align-top">
-                        {item.category_id === 'SLABS' ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full"><Layers className="w-3 h-3" /> Slab</span>
-                        ) : (
-                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-orange-600 bg-orange-50 px-2 py-1 rounded-full"><Hammer className="w-3 h-3" /> Rough</span>
-                        )}
+                      <CategoryBadge product={item} />
                     </td>
                     <td className="p-4 align-top">
                       <div className="font-bold text-slate-700 text-sm">{formatCurrency(item.price)}</div>

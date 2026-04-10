@@ -1,3 +1,4 @@
+//src/components/WoodSlabForm.tsx
 "use client"
 
 import { useState, useRef, useEffect } from 'react'
@@ -555,22 +556,35 @@ export default function WoodSlabForm({ initialData }: { initialData?: any }) {
                   { label: "Finish", id: "spec_finish", placeholder: "Wood Wax Oil" },
                   { label: "Grade", id: "spec_grade", placeholder: "A, B" },
                   { label: "Origin", id: "spec_origin", placeholder: "Thailand" },
-                  { label: "Spec Type", id: "spec_type", placeholder: "Slabs / Joint" },
+                  { label: "Spec Type", id: "spec_type", options: ["Wood slabs", "Small table", "Leg", "Chair/Stool", "Cabinet", "Table", "Small Furniture"] },
                   { label: "Edge Design", id: "spec_edge_design", placeholder: "Live Edge", span: 2 },
                   { label: "Panel Design", id: "spec_panel_design", placeholder: "Natural" },
                   { label: "Color Craft", id: "spec_color_craft", placeholder: "Original" },
                   { label: "Texture Craft", id: "spec_texture_craft", placeholder: "Smooth" },
                   { label: "Panel Craft", id: "spec_panel_craft", placeholder: "Solid" },
                   { label: "Brightness", id: "spec_brightness", placeholder: "Matte", span: 2 }
-                ].map((field) => (
+                ].map((field: any) => (
                   <div key={field.id} className={field.span ? `col-span-${field.span}` : ''}>
                     <label className="text-[10px] font-bold text-slate-500 uppercase">{field.label}</label>
-                    <input 
-                        name={field.id} 
+                    {field.options ? (
+                      <select
+                        name={field.id}
+                        defaultValue={initialData?.specs?.[field.id.replace('spec_', '')] || initialData?.specs?.spec_type || ""}
+                        className="w-full mt-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:border-blue-500 transition bg-white"
+                      >
+                        <option value="">— Select Type —</option>
+                        {field.options.map((opt: string) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        name={field.id}
                         defaultValue={initialData?.specs?.[field.id.replace('spec_', '')] || initialData?.specs?.[field.label.toLowerCase()]}
-                        className="w-full mt-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:border-blue-500 transition" 
-                        placeholder={field.placeholder} 
-                    />
+                        className="w-full mt-1 px-3 py-2 border border-slate-300 rounded text-sm focus:outline-none focus:border-blue-500 transition"
+                        placeholder={field.placeholder}
+                      />
+                    )}
                   </div>
                 ))}
               </div>

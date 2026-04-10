@@ -10,7 +10,7 @@ export default async function DiscountsPage() {
     .select('*, discount_rules(*)')
     .order('created_at', { ascending: false });
 
-  const { data: products } = await supabase.from('products').select('id, name');
+  const { data: products } = await supabase.from('products').select('id, name, sku, image_url').order('sku');
   const { data: branches } = await supabase.from('branches').select('id, branch_name');
 
   return (

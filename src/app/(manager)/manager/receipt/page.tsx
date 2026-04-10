@@ -1,16 +1,14 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-// ❌ ลบ createBrowserClient
-// import { createBrowserClient } from "@supabase/ssr" 
 import { 
-  Receipt, Search, RefreshCcw, Eye, ChevronLeft, ChevronRight, Store
+  Receipt, Search, RefreshCcw, Eye, ChevronLeft, ChevronRight, Store, User 
 } from "lucide-react"
 
-// ✅ แก้ไข: เปลี่ยนจาก getAdminReceipts เป็น getReceipts
+// Import Server Actions
 import { getReceipts, getSaleItems, getBranches, type SaleRecord, type SaleItem } from "../../../../actions/receipt"
 
-// ... (Helper Functions fmtMoney, fmtDT เหมือนเดิม) ...
+// --- Helper Functions ---
 const fmtMoney = (n: number | null) => 
   new Intl.NumberFormat("th-TH", { style: "currency", currency: "THB" }).format(Number(n || 0))
 
@@ -41,21 +39,20 @@ export default function AdminReceiptPage() {
   const [saleItems, setSaleItems] = useState<SaleItem[]>([])
   const [itemsLoading, setItemsLoading] = useState(false)
 
-  // --- 1. Load Branches (via Server Action) ---
+  // --- 1. Load Branches ---
   useEffect(() => {
     getBranches().then(data => setBranches(data))
   }, [])
 
-  // --- 2. Fetch Sales (via Server Action) ---
+  // --- 2. Fetch Sales ---
   const fetchSales = useCallback(async () => {
     setLoading(true)
     
-    // ✅ แก้ไข: เรียกใช้ getReceipts แทน
     const { data, count, error } = await getReceipts(page, pageSize, {
         search: searchQ,
         date: filterDate,
         payment: filterPay,
-        branch: filterBranch // Admin สามารถส่ง filterBranch ที่เลือกไปได้เลย
+        branch: filterBranch
     })
 
     if (error) {
@@ -69,20 +66,18 @@ export default function AdminReceiptPage() {
   }, [page, searchQ, filterDate, filterPay, filterBranch])
 
   useEffect(() => { 
-      // Debounce การค้นหาเล็กน้อยเพื่อไม่ให้รัว Request
       const timer = setTimeout(() => {
           fetchSales()
       }, 500)
       return () => clearTimeout(timer)
   }, [fetchSales])
 
-  // --- 3. View Detail (via Server Action) ---
+  // --- 3. View Detail ---
   const openDetail = async (sale: SaleRecord) => {
     setSelectedSale(sale)
     setIsModalOpen(true)
     setItemsLoading(true)
     
-    // ✅ เรียกใช้ Server Action
     const { data } = await getSaleItems(sale.id)
     setSaleItems(data)
     
@@ -164,18 +159,19 @@ export default function AdminReceiptPage() {
           <div className="overflow-x-auto min-h-[400px]">
             <table className="min-w-full">
                <thead className="bg-slate-50/50 border-b border-slate-100">
-                  <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 font-bold">
-                     <th className="px-6 py-4">สาขา</th>
-                     <th className="px-6 py-4">วัน-เวลา</th>
-                     <th className="px-6 py-4">เลขที่ใบเสร็จ</th>
-                     <th className="px-6 py-4 text-right">ยอดสุทธิ</th>
-                     <th className="px-6 py-4 text-center">ดู</th>
-                  </tr>
-               </thead>
+  <tr className="text-left text-[11px] uppercase tracking-widest text-slate-400 font-bold">
+      <th className="px-6 py-4">สาขา</th>
+      <th className="px-6 py-4">วัน-เวลา</th>
+      <th className="px-6 py-4">เลขที่ใบเสร็จ</th>
+      <th className="px-6 py-4">ผู้ขาย</th>
+      <th className="px-6 py-4 text-right">ยอดสุทธิ</th>
+      <th className="px-6 py-4 text-center">ดู</th>
+  </tr>
+</thead>
                <tbody className="divide-y divide-slate-50">
                   {sales.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-20 text-center text-slate-400 italic">
+                      <td colSpan={6} className="px-6 py-20 text-center text-slate-400 italic">
                         {loading ? "กำลังโหลดข้อมูล..." : "ไม่พบข้อมูลรายการขาย"}
                       </td>
                     </tr>
@@ -191,6 +187,17 @@ export default function AdminReceiptPage() {
                         <td className="px-6 py-4 text-sm font-semibold text-slate-700 font-mono">
                           {r.receipt_no}
                         </td>
+                        
+                        {/* ✅ แสดงชื่อผู้ขาย cashier_name */}
+                        <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                            <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                    <User className="w-3 h-3"/>
+                                </div>
+                                {r.cashier_name || "ไม่ระบุ"}
+                            </div>
+                        </td>
+
                         <td className="px-6 py-4 text-right text-sm font-bold text-slate-800">
                           {fmtMoney(r.total)}
                         </td>

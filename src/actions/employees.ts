@@ -1,3 +1,4 @@
+// src/actions/employees.ts
 "use server"
 
 import { createClient } from "../lib/supabase/server";
@@ -87,7 +88,7 @@ export async function getEmployeesByBranch(branchId: number) {
   }
 }
 
-// 2. อัปเดตข้อมูลพนักงาน (แก้ไขจุดผิดแล้ว ✅)
+// 2. อัปเดตข้อมูลพนักงาน
 export async function updateEmployee(formData: FormData) {
   const userId = formData.get('user_id') as string
   const role = formData.get('role') as string
@@ -104,14 +105,13 @@ export async function updateEmployee(formData: FormData) {
 
   // เตรียมข้อมูล Update
   const profileData = {
-      user_id: userId, // สำคัญ: ต้องมี ID เพื่อให้ upsert รู้ว่าจะแก้แถวไหน
+      user_id: userId,
       full_name: fullName,
       role: role,
       branch_id: (branchId && branchId !== "") ? Number(branchId) : null,
       phone: phone || null,
-      citizen_id: citizenId || null,
+      citizen_id: citizenId || null, // ✅ ใช้ citizenId (ตัวแปร) คู่กับ citizen_id (ชื่อ column)
       birth_date: birthDate || null
-      // ไม่ต้องส่ง email ที่นี่ ถ้าไม่ได้แก้ email
   }
 
   const { error } = await supabaseAdmin
@@ -144,7 +144,9 @@ export async function createEmployee(formData: FormData) {
   const role = formData.get('role') as string
   const branchId = formData.get('branch_id')
   const phone = formData.get('phone') as string
-  const citizenId = formData.get('citizen_id') as string
+  
+  // ✅ ประกาศตัวแปรชื่อ citizenId (camelCase)
+  const citizenId = formData.get('citizen_id') as string 
   const birthDate = formData.get('birth_date') as string
 
   // Validation
@@ -168,17 +170,20 @@ export async function createEmployee(formData: FormData) {
   if (authError) return { error: "สร้างบัญชีไม่สำเร็จ: " + authError.message }
   if (!authData.user) return { error: "ไม่พบข้อมูล User ที่ถูกสร้าง" }
 
-  // 2. สร้าง Profile ใน DB (ใช้ Upsert เพื่อกัน Error duplicate)
+  // 2. สร้าง Profile ใน DB
   const { error: profileError } = await supabaseAdmin
     .from(TABLE_PROFILES)
     .upsert({ 
       user_id: authData.user.id,
-      email: email,
+      // email: email, // คอมเมนต์ออกเพราะใน Table profiles อาจไม่มี column email
       full_name: fullName,
       role: role,
-      branch_id: (branchId && branchId !== "") ? Number(branchId) : null,
+      branch_id: (branchId && branchId !== "" && branchId !== "null") ? Number(branchId) : null,
       phone: phone || null,
-      citizen_id: citizenId || null,
+      
+      // ✅ แก้ไขตรงนี้: key ใน DB คือ 'citizen_id' แต่ค่าที่ส่งไปคือตัวแปร 'citizenId'
+      citizen_id: citizenId || null, 
+      
       birth_date: birthDate || null
     }, { onConflict: 'user_id' })
 

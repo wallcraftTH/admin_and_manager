@@ -145,9 +145,7 @@ export default function PublicStockPage() {
              <RefreshCcw className={`w-5 h-5 ${dataLoading ? 'animate-spin' : ''}`} />
            </button>
            
-           <button onClick={handleLogout} className="text-xs text-red-500 hover:bg-red-50 px-3 py-2 rounded-xl transition-colors font-medium border border-red-100">
-             <LogOut className="w-4 h-4 inline mr-1"/> ออกจากระบบ
-           </button>
+           
         </div>
       </div>
 

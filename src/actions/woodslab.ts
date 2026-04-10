@@ -1,3 +1,5 @@
+//src/actions/woodslab.ts
+
 "use server"
 
 import { createClient } from "../lib/supabase/server"
@@ -31,18 +33,23 @@ export async function uploadFile(formData: FormData) {
   return { success: true }
 }
 
-export async function getProducts(category?: string) {
+export async function getProducts(category?: string, specType?: string) {
   const supabase = await createClient()
-  
+
   // เริ่มต้น Query
   let query = supabase
     .from(TABLE_NAME)
     .select('*')
     .order('created_at', { ascending: false })
 
-  // ถ้าส่ง category มา ให้กรอง (Query แยกจริง)
+  // ถ้าส่ง category มา ให้กรอง
   if (category) {
     query = query.eq('category_id', category)
+  }
+
+  // ถ้าส่ง specType มา ให้กรองตาม specs->type
+  if (specType) {
+    query = query.eq('specs->>type', specType)
   }
 
   const { data, error } = await query
@@ -153,4 +160,24 @@ export async function deleteProduct(id: string | number) {
 
     revalidatePath('/inventory')
     return { success: true }
+}
+
+
+export async function bulkCreateProducts(productsArray: any[]) {
+  const supabase = await createClient()
+  await checkAuth(supabase)
+
+  // ✅ เปลี่ยนจาก .insert() เป็น .upsert()
+  // onConflict: 'sku' บอกว่าถ้า sku ซ้ำ ให้ทำการ Update แทน
+  const { data, error } = await supabase
+    .from(TABLE_NAME)
+    .upsert(productsArray, { onConflict: 'sku' }) 
+    .select()
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/inventory')
+  return { success: true, count: data?.length }
 }

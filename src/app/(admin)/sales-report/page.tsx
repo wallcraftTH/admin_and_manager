@@ -118,7 +118,7 @@ export default function AdminSalesReportPage() {
             <div>
                 <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
                     <BarChart3 className="w-7 h-7 text-blue-600" />
-                    รายงานยอดขายรวม (Hidden Backend)
+                    รายงานยอดขายรวม (ทุกสาขาต้องกดปิดผลัดก่อนถึงจะเห็นยอดขายวันนั้น)
                 </h1>
                 <p className="text-slate-500 text-sm">ตรวจสอบรายได้แบบปลอดภัย</p>
             </div>

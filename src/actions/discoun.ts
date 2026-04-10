@@ -6,10 +6,10 @@ import { revalidatePath } from "next/cache";
 const TABLE_DISCOUNTS = 'discounts'
 const TABLE_RULES = 'discount_rules'
 
-// 1. สร้างส่วนลดใหม่
+// 1. สร้างส่วนลดใหม่ (รองรับหลายสินค้า)
 export async function createDiscount(formData: FormData) {
   const supabase = await createClient();
-  
+
   const discountData = {
     name: formData.get('name') as string,
     code: formData.get('code') ? (formData.get('code') as string).toUpperCase() : null,
@@ -28,19 +28,30 @@ export async function createDiscount(formData: FormData) {
 
   if (discErr) return { error: discErr.message }
 
-  const ruleData = {
-    discount_id: discData.id,
-    min_subtotal: parseFloat(formData.get('min_subtotal') as string) || 0,
-    branch_id: formData.get('branch_id') || null,
-    product_id: formData.get('product_id') || null
+  // รองรับหลาย product_id (ส่งมาเป็น JSON array string)
+  const productIdsRaw = formData.get('product_ids') as string
+  let productIds: (string | null)[] = []
+  try {
+    const parsed = JSON.parse(productIdsRaw || '[]')
+    productIds = Array.isArray(parsed) && parsed.length > 0 ? parsed : [null]
+  } catch {
+    productIds = [null]
   }
 
-  const { error: ruleErr } = await supabase
-    .from(TABLE_RULES)
-    .insert([ruleData])
+  const minSubtotal = parseFloat(formData.get('min_subtotal') as string) || 0
+  const branchId = formData.get('branch_id') || null
+
+  const rules = productIds.map(pid => ({
+    discount_id: discData.id,
+    min_subtotal: minSubtotal,
+    branch_id: branchId,
+    product_id: pid || null,
+  }))
+
+  const { error: ruleErr } = await supabase.from(TABLE_RULES).insert(rules)
 
   if (ruleErr) {
-    await supabase.from(TABLE_DISCOUNTS).delete().eq('id', discData.id) // Rollback
+    await supabase.from(TABLE_DISCOUNTS).delete().eq('id', discData.id)
     return { error: ruleErr.message }
   }
 

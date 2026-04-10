@@ -1,10 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { updateEmployee, deleteEmployee, createEmployee } from "../../../actions/employees"
-import { Edit, Trash2, User, Shield, Briefcase, MapPin, X, Save, AlertCircle, Calendar, CreditCard, Phone, Plus, Key, Mail, Search } from "lucide-react"
+import { updateEmployee, deleteEmployee, createEmployee } from "../../../actions/employees" // ตรวจสอบ path ให้ถูกนะครับ
+import { Edit, Trash2, User, Shield, Briefcase, MapPin, X, Save, AlertCircle, Calendar, CreditCard, Phone, Plus, Key, Mail, Search, CheckCircle, XCircle } from "lucide-react"
 
-// Interface
+// --- Interface ---
 interface Branch { id: number; branch_name: string; branch_code: string }
 interface Profile {
   user_id: string; 
@@ -19,7 +19,7 @@ interface Profile {
   branches: Branch | null;
 }
 
-// ✅ รับ storageBaseUrl เข้ามาเป็น Props
+// --- Component หลัก ---
 export default function EmployeeClient({ initialData, branches, storageBaseUrl }: { initialData: Profile[], branches: Branch[], storageBaseUrl: string }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -27,27 +27,46 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
   const [loading, setLoading] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
-  // ✅ Helper Function: สร้าง URL รูปภาพ (แก้ไขให้ใช้ storageBaseUrl)
+  // ✅ State สำหรับ Custom Alert
+  const [alertState, setAlertState] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error';
+    title: string;
+    message: string;
+  }>({ isOpen: false, type: 'success', title: '', message: '' })
+
+  // --- Helper Functions ---
+
+  // 1. แปลง Error Database เป็นภาษาคน
+  const handleServerError = (errorMsg: string) => {
+    let friendlyMessage = errorMsg;
+
+    if (errorMsg.includes("profiles_citizen_id_check")) {
+      friendlyMessage = "❌ เลขบัตรประชาชนไม่ถูกต้อง กรุณาตรวจสอบว่ากรอกครบ 13 หลักและเป็นตัวเลขเท่านั้น";
+    } else if (errorMsg.includes("duplicate key value")) {
+      friendlyMessage = "❌ อีเมล หรือ ข้อมูลบางอย่างซ้ำกับในระบบ กรุณาตรวจสอบ";
+    } else if (errorMsg.includes("auth/email-already-in-use")) {
+        friendlyMessage = "❌ อีเมลนี้ถูกลงทะเบียนไปแล้ว";
+    } else if (errorMsg.includes("invalid input syntax for type integer")) {
+        friendlyMessage = "❌ ข้อมูลตัวเลขบางอย่างไม่ถูกต้อง";
+    }
+
+    setAlertState({
+      isOpen: true,
+      type: 'error',
+      title: 'เกิดข้อผิดพลาด',
+      message: friendlyMessage
+    });
+  }
+
+  // 2. สร้าง URL รูปภาพ
   const getAvatarUrl = (path: string | null) => {
     if (!path) return null;
-    
-    // 1. ถ้าเป็น URL เต็มอยู่แล้ว (เช่น Google Login)
     if (path.startsWith('http') || path.startsWith('blob:')) return path;
-
-    // 2. ใช้ Base URL ที่ส่งมาจาก Server (ชัวร์ที่สุด)
-    // storageBaseUrl = "https://.../storage/v1/object/public"
-    
-    // ลบ slash นำหน้า path ออกก่อน (กันพลาด) เช่น /profiles/img.png -> profiles/img.png
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-
-    // 3. Logic การต่อ Path
     if (cleanPath.startsWith('profiles/')) {
-        // ใน DB มี "profiles/..." แล้ว -> ต่อกันได้เลย
-        // ผลลัพธ์: .../public/profiles/img.webp
         return `${storageBaseUrl}/${cleanPath}`;
     } else {
-        // ใน DB มีแค่ชื่อไฟล์ -> เติม profiles/ ให้
-        // ผลลัพธ์: .../public/profiles/img.webp
         return `${storageBaseUrl}/profiles/${cleanPath}`;
     }
   };
@@ -70,11 +89,17 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
     setLoading(false)
 
     if (res?.error) {
-      alert("Error: " + res.error)
+      handleServerError(res.error) // เรียกใช้ฟังก์ชันแจ้งเตือนแบบสวย
     } else {
       closeModal()
-      alert("บันทึกข้อมูลเรียบร้อย")
-      window.location.reload()
+      setAlertState({
+        isOpen: true,
+        type: 'success',
+        title: 'สำเร็จ!',
+        message: 'บันทึกข้อมูลพนักงานเรียบร้อยแล้ว'
+      });
+      // รอ User กดปิด Alert ค่อย reload ก็ได้ หรือจะ reload เลยก็ได้
+      // window.location.reload() 
     }
   }
 
@@ -84,19 +109,26 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
     setLoading(false)
 
     if (res?.error) {
-      alert("Error: " + res.error)
+        handleServerError(res.error) // เรียกใช้ฟังก์ชันแจ้งเตือนแบบสวย
     } else {
       setIsCreateModalOpen(false)
-      alert("✅ สร้างพนักงานใหม่เรียบร้อยแล้ว")
-      window.location.reload()
+      setAlertState({
+        isOpen: true,
+        type: 'success',
+        title: 'สร้างบัญชีสำเร็จ!',
+        message: 'พนักงานใหม่ถูกเพิ่มเข้าสู่ระบบแล้ว'
+      });
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("ต้องการลบ User นี้ออกจากระบบถาวรใช่หรือไม่?")) return
     const res = await deleteEmployee(id)
-    if (res?.error) alert(res.error)
-    else window.location.reload()
+    if (res?.error) {
+        handleServerError(res.error)
+    } else {
+        window.location.reload()
+    }
   }
 
   const closeModal = () => { setIsModalOpen(false); setEditingEmp(null); }
@@ -172,8 +204,6 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
                                     }}
                                 />
                             ) : null}
-                            
-                            {/* Fallback Initials */}
                             <div className={`absolute inset-0 flex items-center justify-center bg-blue-50 text-blue-600 font-bold text-sm ${avatarSrc ? '-z-10' : ''}`}>
                                 {emp.full_name ? emp.full_name.charAt(0).toUpperCase() : <User className="w-5 h-5"/>}
                             </div>
@@ -232,9 +262,43 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
         </div>
       </div>
 
-      {/* ... (Modal แก้ไข และ Modal สร้าง ยังคงเหมือนเดิม ไม่ต้องแก้ครับ) ... */}
-      {/* ถ้าต้องการโค้ด Modal ซ้ำ บอกได้ครับ แต่ใช้ของเดิมได้เลย */}
-      
+      {/* =================================================================================== */}
+      {/* 🔥🔥🔥 CUSTOM ALERT MODAL (Full Screen) 🔥🔥🔥 */}
+      {/* =================================================================================== */}
+      {alertState.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col items-center p-6 animate-in zoom-in-95 duration-200">
+                {/* Icon */}
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${alertState.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    {alertState.type === 'success' ? <CheckCircle className="w-8 h-8"/> : <XCircle className="w-8 h-8"/>}
+                </div>
+
+                {/* Title */}
+                <h3 className={`text-xl font-bold mb-2 ${alertState.type === 'success' ? 'text-slate-800' : 'text-red-600'}`}>
+                    {alertState.title}
+                </h3>
+
+                {/* Message */}
+                <p className="text-slate-500 text-center mb-6 text-sm leading-relaxed">
+                    {alertState.message}
+                </p>
+
+                {/* Button */}
+                <button 
+                    onClick={() => {
+                        setAlertState({ ...alertState, isOpen: false });
+                        if (alertState.type === 'success') window.location.reload(); // ถ้าสำเร็จ พอกดปิดให้รีหน้าเว็บ
+                    }}
+                    className={`w-full py-3 rounded-xl font-bold text-white shadow-lg transition-transform active:scale-95 ${alertState.type === 'success' ? 'bg-green-600 hover:bg-green-700 shadow-green-200' : 'bg-slate-800 hover:bg-slate-900 shadow-slate-200'}`}
+                >
+                    {alertState.type === 'success' ? 'ตกลง' : 'รับทราบ'}
+                </button>
+            </div>
+        </div>
+      )}
+      {/* =================================================================================== */}
+
+
       {/* --- Modal แก้ไข (Edit) --- */}
       {isModalOpen && editingEmp && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -329,8 +393,6 @@ export default function EmployeeClient({ initialData, branches, storageBaseUrl }
           </div>
         </div>
       )}
-
-      {/* --- Modal สร้าง (Create) --- */}
 
       {/* --- Modal สร้าง (Create) --- */}
       {isCreateModalOpen && (
