@@ -119,7 +119,7 @@ export default function BulkUploadProducts() {
             specs.thickness_cm = dims.t;
           }
         } else if (row.length && row.width && row.thickness) {
-          specs.size = `${row.length}-${row.width}-${row.thickness} CM`;
+          specs.size = `${row.length}-${row.width}-${row.thickness} MM`;
           specs.length_cm = Number(row.length); 
           specs.width_cm = Number(row.width); 
           specs.thickness_cm = Number(row.thickness);

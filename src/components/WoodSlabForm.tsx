@@ -194,7 +194,9 @@ export default function WoodSlabForm({ initialData }: { initialData?: any }) {
       })
       specsRaw.type = specsRaw.spec_type
       if(dims) {
-        specsRaw.length_cm = dims.l; specsRaw.width_cm = dims.w; specsRaw.thickness_cm = dims.t
+        specsRaw.length_mm = dims.l; specsRaw.width_mm = dims.w; specsRaw.thickness_mm = dims.t
+        // ลบ field _cm เก่าออก (ถ้ามีจากข้อมูลเก่า)
+        delete specsRaw.length_cm; delete specsRaw.width_cm; delete specsRaw.thickness_cm
       }
 
       const rawSku = formData.get('sku') as string
@@ -551,7 +553,7 @@ export default function WoodSlabForm({ initialData }: { initialData?: any }) {
               </div>
               <div className="p-6 grid grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
-                  { label: "Size", id: "spec_size", placeholder: "200-80-5 CM" },
+                  { label: "Size (MM)", id: "spec_size", placeholder: "2000-800-50 MM" },
                   { label: "Material", id: "spec_material", placeholder: "Neem Wood" },
                   { label: "Finish", id: "spec_finish", placeholder: "Wood Wax Oil" },
                   { label: "Grade", id: "spec_grade", placeholder: "A, B" },
