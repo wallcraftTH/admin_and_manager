@@ -1,44 +1,21 @@
 "use client";
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { addProp } from "@/actions/props";
 
 export default function UploadPropPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-
-    const formData = new FormData(e.currentTarget);
-    const itemNo = formData.get("item_no") as string; // จะเอาไปใส่ sku
-    const codeSku = formData.get("code_sku") as string; // จะเอาไปใส่ barcode
-    
-    const specsData = {
-      width_cm: formData.get("width_cm"),
-      length_cm: formData.get("length_cm"),
-      thickness_cm: formData.get("thickness_cm"),
-    };
-
-    const { error } = await supabase.from("products").insert({
-      name: `Prop - ${itemNo}`, 
-      sku: itemNo,      // สลับตามหลานสั่ง: Item NO. -> SKU
-      barcode: codeSku, // สลับตามหลานสั่ง: CODE/SKU -> Barcode
-      color: formData.get("color"),
-      category_id: "prop",
-      // รูปดึงจาก barcode (ซึ่งเก็บ CODE/SKU เดิมไว้จ้ะ)
-      image_url: `https://pub-258bd10e7e8c4a7690a74c54cfbdef93.r2.dev/props/${codeSku}.png`,
-      specs: specsData,
-      status: "active"
-    });
-
-    if (error) {
-        alert("โอ๊ยหลาน! มีปัญหาตอนบันทึก: " + error.message);
-    } else {
-        alert("บันทึกสินค้า Prop เรียบร้อยแล้วจ้ะหลานรัก!");
-        router.push("/props");
+    try {
+      await addProp(new FormData(e.currentTarget));
+      alert("บันทึกสินค้า Prop เรียบร้อยแล้วจ้ะหลานรัก!");
+      router.push("/props");
+    } catch (err: any) {
+      alert("โอ๊ยหลาน! มีปัญหาตอนบันทึก: " + err.message);
     }
     setLoading(false);
   };
@@ -50,7 +27,7 @@ export default function UploadPropPage() {
           <h1 className="text-2xl font-black text-gray-900">📥 New Prop Registration</h1>
           <p className="text-gray-400 text-sm mt-2">กรอกข้อมูลเพื่อบันทึกสินค้าประกอบฉากเข้าสต็อก</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-2">
@@ -86,8 +63,8 @@ export default function UploadPropPage() {
             </div>
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={loading}
             className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 transition-all shadow-xl shadow-blue-200 disabled:bg-gray-300"
           >

@@ -27,12 +27,14 @@ export default function BulkUploadProducts() {
   const [loading, setLoading] = useState(false)
   const [status, setStatus] = useState<{ type: 'success' | 'error' | 'info', msg: string } | null>(null)
 
-  const [defaultCategory, setDefaultCategory] = useState<'SLABS' | 'rough_wood'>('SLABS')
+  const [defaultCategory, setDefaultCategory] = useState<'SLABS' | 'rough_wood' | 'prop'>('SLABS')
   const [selectedType, setSelectedType] = useState<SelectedType>(null)
 
   const handleSelectType = (type: SelectedType) => {
     setSelectedType(type)
-    setDefaultCategory(type === 'rough_wood' ? 'rough_wood' : 'SLABS')
+    if (type === 'rough_wood') setDefaultCategory('rough_wood')
+    else if (type === 'prop') setDefaultCategory('prop')
+    else setDefaultCategory('SLABS')
   }
 
   // --- 1. ฟังก์ชันแกะตัวเลขจาก Size String ---
@@ -44,28 +46,49 @@ export default function BulkUploadProducts() {
 
   // --- 2. ฟังก์ชันดาวน์โหลด Template ---
   const downloadTemplate = () => {
-    const templateHeader = [
-      {
-        Barcode: "BX001", 
+    const wb = XLSX.utils.book_new();
+
+    if (selectedType === 'prop') {
+      const propTemplate = [{
+        "Item NO.": "HPST3584P",
+        "ชื่อโรงงาน": "Merlin",
+        "Group Sisz": "L",
+        "Link Picture": "https://pub-258bd10e7e8c4a7690a74c54cfbdef93.r2.dev/props/ML-VA-CR-HPST3584P.png",
+        "Product Group": "ML-PP-DECOR000001",
+        "Description": "",
+        "Product Sub": "Vase",
+        "Material": "Ceramic",
+        "Color": "Pink",
+        "CODE/SKU": "ML-VA-CR-HPST3584P",
+        "W": 7.1,
+        "D": 5.5,
+        "H": 28,
+        "Stock": 1,
+      }];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(propTemplate), "Props Template");
+      XLSX.writeFile(wb, "props_import_template.xlsx");
+    } else {
+      const templateHeader = [{
+        Barcode: "BX001",
         sku: "WOODSLABS-001",
-        name: "ไม้แผ่นตัวอย่าง", 
-        category_id: "SLABS", // ✅ เพิ่มคอลัมน์ category_id เผื่อ User อยากใส่ผสมกัน
-        color: "Natural",     // ✅ เพิ่มคอลัมน์ color
-        unit: "แผ่น",         // ✅ เพิ่มคอลัมน์ unit
-        description: "ไม้เนื้อแข็งลายสวยงาม เหมาะสำหรับทำโต๊ะ...", // ✅ เพิ่มคอลัมน์ description
-        cost: 0, 
-        price: 5000, 
-        status: "active", 
+        name: "ไม้แผ่นตัวอย่าง",
+        category_id: "SLABS",
+        color: "Natural",
+        unit: "แผ่น",
+        description: "ไม้เนื้อแข็งลายสวยงาม เหมาะสำหรับทำโต๊ะ...",
+        cost: 0,
+        price: 5000,
+        status: "active",
         image_url: "https://.../main.webp",
-        size: "200-80-5 CM", 
-        width: 80, 
-        length: 200, 
+        size: "200-80-5 CM",
+        width: 80,
+        length: 200,
         thickness: 5,
         weight: 25,
         material: "Beech Wood",
         finish: "Wood Wax Oil",
         grade: "A",
-        spec_type: "Wood slabs", // Wood slabs / Small table / Leg / Chair/Stool / Cabinet / Table / Small Furniture
+        spec_type: "Wood slabs",
         panel_design: "Natural",
         edge_design: "Live Edge",
         color_craft: "Original",
@@ -73,13 +96,10 @@ export default function BulkUploadProducts() {
         images_1: "https://.../extra1.webp",
         images_2: "https://.../extra2.webp",
         images_3: ""
-      }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateHeader);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Template");
-    XLSX.writeFile(wb, "product_import_template.xlsx");
+      }];
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(templateHeader), "Template");
+      XLSX.writeFile(wb, "product_import_template.xlsx");
+    }
   };
 
   // --- 3. ฟังก์ชันจัดการไฟล์อัปโหลด ---
@@ -96,6 +116,43 @@ export default function BulkUploadProducts() {
       const rawJson = XLSX.utils.sheet_to_json(ws)
       
       const processed = rawJson.map((row: any, idx: number) => {
+        // --- Props mode ---
+        if (selectedType === 'prop') {
+          const itemNo = row["Item NO."]?.toString() || row["item_no"]?.toString() || `PROP-${Date.now()}-${idx}`
+          const codeSku = row["CODE/SKU"]?.toString() || row["code_sku"]?.toString() || ""
+          const w = row["W"] != null ? Number(row["W"]) : null
+          const d = row["D"] != null ? Number(row["D"]) : null
+          const h = row["H"] != null ? Number(row["H"]) : null
+
+          return {
+            name: `Prop - ${itemNo}`,
+            sku: itemNo,
+            barcode: codeSku,
+            color: row["Color"]?.toString() || row["color"]?.toString() || null,
+            category_id: "prop",
+            image_url: row["Link Picture"]?.toString() || row["image_url"]?.toString() ||
+              (codeSku ? `https://pub-258bd10e7e8c4a7690a74c54cfbdef93.r2.dev/props/${codeSku}.png` : null),
+            status: "active",
+            cost: 0,
+            price: 0,
+            weight: 0,
+            unit: "ชิ้น",
+            description: row["Description"]?.toString() || null,
+            specs: {
+              width_cm: w,
+              length_cm: d,
+              thickness_cm: h,
+              brand: row["ชื่อโรงงาน"]?.toString() || null,
+              group_size: row["Group Sisz"]?.toString() || row["Group Size"]?.toString() || null,
+              product_group: row["Product Group"]?.toString() || null,
+              product_sub: row["Product Sub"]?.toString() || null,
+              material: row["Material"]?.toString() || null,
+              stock: row["Stock"] != null ? Number(row["Stock"]) : null,
+            }
+          }
+        }
+
+        // --- SLABS / Rough Wood mode ---
         const resolvedSpecType = row.spec_type || (selectedType !== 'rough_wood' ? selectedType : undefined) || undefined
         const specs: any = {
           material: row.material,
@@ -109,42 +166,35 @@ export default function BulkUploadProducts() {
           panel_craft: row.panel_craft,
         }
 
-        // Logic จัดการ Size
         if (row.size) {
           const dims = parseDims(row.size.toString())
           if (dims) {
-            specs.size = row.size; 
-            specs.length_cm = dims.l; 
-            specs.width_cm = dims.w; 
+            specs.size = row.size;
+            specs.length_cm = dims.l;
+            specs.width_cm = dims.w;
             specs.thickness_cm = dims.t;
           }
         } else if (row.length && row.width && row.thickness) {
           specs.size = `${row.length}-${row.width}-${row.thickness} MM`;
-          specs.length_cm = Number(row.length); 
-          specs.width_cm = Number(row.width); 
+          specs.length_cm = Number(row.length);
+          specs.width_cm = Number(row.width);
           specs.thickness_cm = Number(row.thickness);
         }
 
-        // Logic จัดการ Gallery Images
         const extraImages: any[] = []
         Object.keys(row).forEach(key => {
           if (key.startsWith('images_') && row[key]) {
-            extraImages.push({
-              path: row[key],
-              role: "extra",
-              sort: parseInt(key.split('_')[1] || "1")
-            })
+            extraImages.push({ path: row[key], role: "extra", sort: parseInt(key.split('_')[1] || "1") })
           }
         })
         specs.images = extraImages
         specs.images_count = extraImages.length
 
-        // ✅ ลอจิกความฉลาด หาหมวดหมู่ที่แท้จริง
         let finalCategory = defaultCategory;
         if (row.category_id) {
-            finalCategory = row.category_id; // 1. ยึดข้อมูลใน Excel ก่อน
+          finalCategory = row.category_id;
         } else if (row.sku?.toString().toUpperCase().startsWith('ROUGH')) {
-            finalCategory = 'rough_wood'; // 2. แอบเช็คจาก SKU ถ้ามีคำว่า ROUGH
+          finalCategory = 'rough_wood';
         }
 
         return {
@@ -157,25 +207,26 @@ export default function BulkUploadProducts() {
           price: Number(row.price?.toString().replace(/[^0-9.]/g, '') || 0),
           weight: Number(row.weight || 0),
           specs: specs,
-          
-          // ✅ จับ 4 ฟิลด์ที่เคยแหว่งมายัดใส่ให้ครบ
           category_id: finalCategory,
           color: row.color?.toString() || null,
-          unit: row.unit?.toString() || 'แผ่น', // Default เป็นแผ่น
+          unit: row.unit?.toString() || 'แผ่น',
           description: row.description?.toString() || null
         }
       })
 
       // กรองข้อมูลที่ SKU ซ้ำกันในไฟล์ออก (เอาแถวล่าสุดไว้)
+      const skuCount = new Map<string, number>()
+      processed.forEach(item => skuCount.set(item.sku, (skuCount.get(item.sku) || 0) + 1))
+      const dupSkus = Array.from(skuCount.entries()).filter(([, c]) => c > 1).map(([sku]) => sku)
+
       const uniqueData = Array.from(
         new Map(processed.map((item) => [item.sku, item])).values()
       );
 
-      // แจ้งเตือนถ้ายูสเซอร์ใส่ไฟล์ที่มี SKU ซ้ำกันมา
-      if (uniqueData.length < processed.length) {
+      if (dupSkus.length > 0) {
         setStatus({
           type: 'info',
-          msg: `พบข้อมูล SKU ซ้ำกันในไฟล์ ${processed.length - uniqueData.length} รายการ ระบบคัดเหลือเฉพาะรายการล่าสุดแล้วครับ`
+          msg: `พบ SKU ซ้ำ ${dupSkus.length} รายการ (ระบบเก็บแถวล่าสุดไว้): ${dupSkus.join(', ')}`
         })
       }
 
@@ -280,6 +331,28 @@ export default function BulkUploadProducts() {
             </button>
           </div>
 
+          {/* Props */}
+          <div className="border-t border-slate-200 pt-3">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1">
+              🖼️ Props / Decor
+            </p>
+            <button
+              type="button"
+              onClick={() => handleSelectType('prop')}
+              className={`px-3 py-2 rounded-lg border-2 text-sm font-semibold transition-all
+                ${selectedType === 'prop'
+                  ? 'border-purple-500 bg-purple-50 text-purple-700 shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300 hover:text-purple-600'}`}
+            >
+              Props / Decor (สินค้าประกอบฉาก)
+            </button>
+            {selectedType === 'prop' && (
+              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                <Info size={13} /> ใช้ column: Item NO., CODE/SKU, Color, Link Picture, W, D, H, Material, Product Sub ฯลฯ
+              </p>
+            )}
+          </div>
+
           {selectedType === null && (
             <p className="text-xs text-amber-600 mt-3 flex items-center gap-1 font-medium">
               <Info size={13} /> กรุณาเลือกประเภทสินค้าก่อนอัปโหลดไฟล์
@@ -328,34 +401,63 @@ export default function BulkUploadProducts() {
           <div className="overflow-x-auto border rounded-xl max-h-[500px] overflow-y-auto">
             <table className="w-full text-left text-sm border-collapse relative">
               <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] sticky top-0 z-10 shadow-sm">
-                <tr>
-                  <th className="p-3 border-b">SKU</th>
-                  <th className="p-3 border-b">Category</th>
-                  <th className="p-3 border-b">Barcode</th>
-                  <th className="p-3 border-b">Name</th>
-                  <th className="p-3 border-b">Size</th>
-                  <th className="p-3 border-b text-right">Price</th>
-                  <th className="p-3 border-b text-center">Images</th>
-                </tr>
+                {selectedType === 'prop' ? (
+                  <tr>
+                    <th className="p-3 border-b">Item NO. (SKU)</th>
+                    <th className="p-3 border-b">CODE/SKU (Barcode)</th>
+                    <th className="p-3 border-b">Color</th>
+                    <th className="p-3 border-b">Material</th>
+                    <th className="p-3 border-b">Product Sub</th>
+                    <th className="p-3 border-b text-center">W</th>
+                    <th className="p-3 border-b text-center">D</th>
+                    <th className="p-3 border-b text-center">H</th>
+                    <th className="p-3 border-b text-center">Stock</th>
+                  </tr>
+                ) : (
+                  <tr>
+                    <th className="p-3 border-b">SKU</th>
+                    <th className="p-3 border-b">Category</th>
+                    <th className="p-3 border-b">Barcode</th>
+                    <th className="p-3 border-b">Name</th>
+                    <th className="p-3 border-b">Size</th>
+                    <th className="p-3 border-b text-right">Price</th>
+                    <th className="p-3 border-b text-center">Images</th>
+                  </tr>
+                )}
               </thead>
               <tbody>
                 {data.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition">
-                    <td className="p-3 border-b font-mono text-xs font-bold text-blue-700">{item.sku}</td>
-                    {/* ✅ เพิ่ม Preview Category ให้ User เช็คความชัวร์ */}
-                    <td className="p-3 border-b">
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold ${item.category_id === 'SLABS' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                        {item.category_id}
-                      </span>
-                    </td>
-                    <td className="p-3 border-b font-mono text-xs text-slate-600">{item.barcode || '-'}</td>
-                    <td className="p-3 border-b font-medium text-slate-800">{item.name}</td>
-                    <td className="p-3 border-b text-slate-500 text-xs">{item.specs.size || '-'}</td>
-                    <td className="p-3 border-b text-right text-blue-600 font-bold">{item.price.toLocaleString()}</td>
-                    <td className="p-3 border-b text-center">
-                      <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-[10px] font-bold">+{item.specs.images_count}</span>
-                    </td>
-                  </tr>
+                  selectedType === 'prop' ? (
+                    <tr key={idx} className="hover:bg-purple-50 transition">
+                      <td className="p-3 border-b font-mono text-xs font-bold text-purple-700">{item.sku}</td>
+                      <td className="p-3 border-b font-mono text-xs text-slate-600">{item.barcode || '-'}</td>
+                      <td className="p-3 border-b text-xs">{item.color || '-'}</td>
+                      <td className="p-3 border-b text-xs">{item.specs.material || '-'}</td>
+                      <td className="p-3 border-b text-xs">{item.specs.product_sub || '-'}</td>
+                      <td className="p-3 border-b text-center text-xs text-blue-700 font-bold">{item.specs.width_cm != null && !isNaN(item.specs.width_cm) ? item.specs.width_cm : '-'}</td>
+                      <td className="p-3 border-b text-center text-xs text-green-700 font-bold">{item.specs.length_cm != null && !isNaN(item.specs.length_cm) ? item.specs.length_cm : '-'}</td>
+                      <td className="p-3 border-b text-center text-xs text-purple-700 font-bold">{item.specs.thickness_cm != null && !isNaN(item.specs.thickness_cm) ? item.specs.thickness_cm : '-'}</td>
+                      <td className="p-3 border-b text-center">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-[10px] font-bold">{item.specs.stock != null && !isNaN(item.specs.stock) ? item.specs.stock : '-'}</span>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={idx} className="hover:bg-slate-50 transition">
+                      <td className="p-3 border-b font-mono text-xs font-bold text-blue-700">{item.sku}</td>
+                      <td className="p-3 border-b">
+                        <span className={`px-2 py-1 rounded text-[10px] font-bold ${item.category_id === 'SLABS' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {item.category_id}
+                        </span>
+                      </td>
+                      <td className="p-3 border-b font-mono text-xs text-slate-600">{item.barcode || '-'}</td>
+                      <td className="p-3 border-b font-medium text-slate-800">{item.name}</td>
+                      <td className="p-3 border-b text-slate-500 text-xs">{item.specs.size || '-'}</td>
+                      <td className="p-3 border-b text-right text-blue-600 font-bold">{item.price.toLocaleString()}</td>
+                      <td className="p-3 border-b text-center">
+                        <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-full text-[10px] font-bold">+{item.specs.images_count}</span>
+                      </td>
+                    </tr>
+                  )
                 ))}
               </tbody>
             </table>

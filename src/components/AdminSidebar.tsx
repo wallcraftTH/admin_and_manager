@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { logoutAction } from "../actions/auth";
-import { 
-  LayoutDashboard, Box, PlusCircle, ShoppingCart, 
-  MapPin, Tag, LogOut, Users, Receipt, 
-  BarChart3, History, Package, Settings 
+import {
+  LayoutDashboard, Box, PlusCircle, ShoppingCart,
+  MapPin, Tag, LogOut, Users, Receipt,
+  BarChart3, History, Package, Settings, Frame
 } from "lucide-react";
 
 // 1. เมนูที่ใช้บ่อย (งานประจำวัน)
@@ -17,6 +17,7 @@ const primaryItems = [
   { name: "ขายสินค้า (Slab)", href: "/sale_slab", icon: ShoppingCart },
   { name: "สินค้าทั้งหมด", href: "/inventory", icon: Box },
   { name: "เพิ่มสินค้า", href: "/addproduct", icon: PlusCircle },
+  { name: "Props / Decor", href: "/props", icon: Frame },
 ];
 
 // 2. เมนูการจัดการและรายงาน
